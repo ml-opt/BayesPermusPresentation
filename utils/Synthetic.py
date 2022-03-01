@@ -64,7 +64,7 @@ def plot_hist(max_distance, hist, ax, title):
 
   ax.bar(range(max_distance + 1), count, color='gray')
   ax.set_title(title)
-  ax.set_xlabel('Distance to mode')
+  ax.set_xlabel('Distance to mode', fontsize=24)
 
 def synthetic(num_instances, mean, std):
   assert(len(mean) == len(std))

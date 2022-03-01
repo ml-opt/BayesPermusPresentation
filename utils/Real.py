@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import itertools
+import random
 
 def fix_index(df):
   fixed_index = []
@@ -19,7 +20,6 @@ def ranks_from_score(score):
   # Set of linear extensions of the original ranking. The linear extensions are
   # obtained when ties are resolved in all possible ways.
   permus = []
-  weights = []
 
   n = len(score)
   rank = np.argsort(score)
@@ -50,24 +50,14 @@ def ranks_from_score(score):
       if len(repeated) > 1:
         ties_set.append(repeated)
 
-  # List that contains several lists that represent the elements index that are 
-  # repeated in the original score and all their permutations. 
-  #
-  # For example, if there is a single list with two elements, it means that there 
-  # is a single repeated element that appears three times in the original score.
-  #
-  # If there are two lists with three elements each, it means that there are two
-  # repeated elements that appear three times each in the original score.
-  #
-  # The values within each list inside this list represent the rankings of such
-  # repeated entries.
-  extensions = []
-  for i, repeated in enumerate(ties_set):
-    extensions.append(list(itertools.permutations(repeated)))
-  extensions = list(itertools.product(*extensions))
+  while True:
 
-  # Loop through all possible linear extensions.
-  for extension in extensions:
+    extension = []
+
+    for tie in ties_set:
+      random.shuffle(tie)
+      extension.append(tie)
+    
     # Start to modify the original ranking to create the linear extension.
     permu = rank
 
@@ -85,13 +75,9 @@ def ranks_from_score(score):
       # Modify the original ranking iteratively.
       permu = np.concatenate((permu[:start], section, permu[start + sec_size:]))
 
-    # Add the linear extension to the permutation set.
-    permus.append(permu + 1)
-    weights.append(1.0 / len(extensions))
+    yield permu + 1
 
-  return permus, weights
-
-def load_permus_from_file(prefix, algorithms, num_instances=10, num_reps=20):
+def load_permus_from_CEB(prefix, algorithms, num_instances=10, num_reps=20):
   permus = []
   scores = []
   problems = []
@@ -115,28 +101,43 @@ def load_permus_from_file(prefix, algorithms, num_instances=10, num_reps=20):
             score.append(df.loc[(problem, str(rep + 1)), str(instance)])
             # Obtain the rankings, including linear extensions.
           
-          p, w = ranks_from_score(score)
+          generator = ranks_from_score(score)
+          
+          permus.append(generator)
           scores.append(score)
 
-          permus += p
-          weights += w
+  return permus, np.array(scores)
 
-  return np.array(permus), np.array(weights), np.array(scores)
+def load_permus_from_CEC(prefix, problems, dimensions, errors, algorithms, repetitions):
+  permus = []
+  scores = []
 
-def sample_permus(permus, weights, num_samples):
-  n = len(weights)
+  for problem in problems:
+    for dimension in dimensions:
+      results = [pd.read_csv(prefix + '/' + algorithm + '/' + str(algorithm) + '_' + 
+                             str(problem) + '_' + str(dimension) + '.txt',
+                             header=None, sep=",") for algorithm in algorithms]
+
+      for error in errors:
+        for repetition in repetitions:
+          score = []
+
+          for result in results:
+            score.append(result.iloc[error, repetition])
+
+          generator = ranks_from_score(score)
+          scores.append(score)
+          permus.append(generator)
+  
+  return permus, np.array(scores)
+
+def sample_permus(permus, num_samples):
+  n = len(permus)
   sample_permus = []
-  sample_weights = []
 
-  while True:
+  for i in range(num_samples):
     idx = np.random.randint(0, n)
+    permu = next(permus[idx])
+    sample_permus.append(permu)
 
-    permu = permus[idx]
-    w = weights[idx]
-
-    if np.random.random() < w:
-      sample_permus.append(permu)
-      sample_weights.append(w)
-
-      if len(sample_weights) == num_samples:
-        return np.array(sample_permus), np.array(sample_weights)
+  return np.array(sample_permus)
