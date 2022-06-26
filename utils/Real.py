@@ -131,13 +131,27 @@ def load_permus_from_CEC(prefix, problems, dimensions, errors, algorithms, repet
   
   return permus, np.array(scores)
 
-def sample_permus(permus, num_samples):
+def get_sample(permus, scores, num_samples):
   n = len(permus)
   sample_permus = []
+  sample_scores = []
 
   for i in range(num_samples):
     idx = np.random.randint(0, n)
-    permu = next(permus[idx])
-    sample_permus.append(permu)
+    sample_permus.append(permus[idx])
+    sample_scores.append(scores[idx])
 
-  return np.array(sample_permus)
+  return sample_permus, sample_scores
+
+def get_counts(scores):
+    values, counts = np.unique(scores, return_counts=True, axis=0)
+    return counts
+
+def unroll(permus, counts):
+    unrolled = []
+    weights = []
+    for permu, count in zip(permus, counts):
+        for _ in range(count):
+            unrolled.append(next(permu))
+            weights.append(1 / count)
+    return np.array(unrolled), weights

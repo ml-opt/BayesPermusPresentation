@@ -11,8 +11,8 @@ def format_regular_coordinate_axis(axs):
       for item in ax.get_xticklabels() + ax.get_yticklabels():
         item.set_fontsize(24)
 
-      ax.yaxis.set_major_formatter(FuncFormatter(lambda x, p: ('' if x == 0 else '{:,.2E}'.format(x))))
-      ax.yaxis.set_major_locator(MaxNLocator(4)) 
+      #ax.yaxis.set_major_formatter(FuncFormatter(lambda x, p: ('' if x == 0 else '{:,.2E}'.format(x))))
+      #ax.yaxis.set_major_locator(MaxNLocator(4)) 
 
 def format_polar_coordinate_axis(axs):
   for ax in axs:

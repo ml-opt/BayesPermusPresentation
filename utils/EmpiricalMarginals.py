@@ -1,55 +1,60 @@
 import numpy as np
 
-def empirical_top_ranking_probs(orderings):
-  n, m =orderings.shape
-  probs = []
+def empirical_top_ranking_probs(scores):
+  m, n = scores.shape
+  probs = np.zeros(n)
+  
+  for score in scores:
+    indices = np.argsort(score)
+    probs[indices[0]] += 1
+    
+    for i in range(1, n):
+      if score[indices[i - 1]] == score[indices[i]]:
+        probs[indices[i]] += 1
+      else:
+        break
+  
+  return probs / np.sum(probs)
+
+def empirical_better_than(scores):
+  n, m = scores.shape
+  probs = np.zeros((m, m))
+
+  for score in scores:
+    indices = np.argsort(score)
+
+    for i in range(m):
+      for j in range(i + 1, m):
+        if score[i] == score[j]:
+          probs[i, j] += 1
+          probs[j, i] += 1
+        elif score[i] < score[j]:
+          probs[i, j] += 1
+        elif score[i] > score[j]:
+          probs[j, i] += 1
 
   for i in range(m):
-    p_empirical = 0
-    for order in orderings:
-      if order[0] == i + 1:
-        p_empirical += 1
-    probs.append(p_empirical / n)
+    for j in range(i + 1, m):
+      sume = probs[i, j] + probs[j, i]
+      probs[i, j] /= sume
+      probs[j, i] /= sume
 
   return probs
 
-def empirical_better_than(orderings):
-  def indexOf(arr, elem):
-    for i, val in enumerate(arr):
-      if val == elem:
-        return i
-    return -1
+def empirical_top_k(scores):
+  n, m = scores.shape
+  probs = np.zeros((m, m))
 
-  n, m =orderings.shape
-  probs = np.zeros((n, m))
+  for score  in scores:
+    indices = np.argsort(score)
+    probs[:, indices[0]] += 1
 
-  for i in range(m):
-    for j in range(m):
-      if i != j:
-        p_empirical = 0
-        for order in orderings:
-          if indexOf(order, i + 1) < indexOf(order, j + 1):
-            p_empirical += 1
-        probs[i, j] = p_empirical / n
+    k = 0
+    for i in range(1, m):
+      if score[indices[i - 1]] == score[indices[i]]:
+        probs[k:, indices[i]] += 1
+      else:
+        k += 1
+        probs[k:, indices[i]] += 1
 
-  return probs
-
-def empirical_top_k(orderings):
-  def indexOf(arr, elem):
-    for i, val in enumerate(arr):
-      if val == elem:
-        return i
-    return -1
-
-  n, m =orderings.shape
-  probs = np.zeros((n, m))
-
-  for i in range(m):
-    for j in range(m):
-        p_empirical = 0
-        for order in orderings:
-          if indexOf(order, j + 1) <= i:
-            p_empirical += 1
-        probs[i, j] = p_empirical / n
-
-  return probs
+  return probs / n
